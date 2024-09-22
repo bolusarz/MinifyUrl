@@ -1,0 +1,1 @@
+alter table if exists links rename column user_id to "user";
