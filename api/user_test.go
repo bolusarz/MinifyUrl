@@ -240,6 +240,10 @@ func TestLogin(t *testing.T) {
 					GetUser(gomock.Any(), user.Username).
 					Times(1).
 					Return(user, nil)
+
+				store.EXPECT().
+					CreateSession(gomock.Any(), gomock.Any()).
+					Times(1)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)
@@ -305,6 +309,27 @@ func TestLogin(t *testing.T) {
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+		},
+		{
+			name: "InternalServerError",
+			payload: gin.H{
+				"username": user.Username,
+				"password": password,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUser(gomock.Any(), user.Username).
+					Times(1).
+					Return(user, nil)
+
+				store.EXPECT().
+					CreateSession(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Session{}, sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
 			},
 		},
 	}
@@ -373,5 +398,6 @@ func requireBodyMatchLoggedInUser(t *testing.T, body *bytes.Buffer, user db.User
 	require.Equal(t, user.FirstName, gotUser["first_name"])
 	require.Equal(t, user.LastName, gotUser["last_name"])
 	require.Equal(t, user.Email, gotUser["email"])
-	require.NotEmpty(t, responseData["token"])
+	require.NotEmpty(t, responseData["access_token"])
+	require.NotEmpty(t, responseData["refresh_token"])
 }

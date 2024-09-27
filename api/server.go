@@ -38,6 +38,7 @@ func (server *Server) setupRouter() {
 
 	router.POST("/users", server.createUser)
 	router.POST("/login", server.loginUser)
+	router.POST("/token/refresh", server.renewAccessToken)
 
 	router.GET("/:code", server.GetLinkByCode)
 

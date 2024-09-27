@@ -39,6 +39,16 @@ func RandomCode() string {
 	return RandomString(6)
 }
 
+func RandomIP() string {
+	return fmt.Sprintf(
+		"%v.%v.%v.%v",
+		RandomInt(0, 199),
+		RandomInt(0, 199),
+		RandomInt(0, 199),
+		RandomInt(0, 199),
+	)
+}
+
 func RandomUsername() string {
 	return RandomString(6)
 }

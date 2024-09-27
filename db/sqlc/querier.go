@@ -6,15 +6,22 @@ package db
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
+	BlockSession(ctx context.Context, id uuid.UUID) (Session, error)
 	CreateLink(ctx context.Context, arg CreateLinkParams) (Link, error)
+	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	GetActiveSessions(ctx context.Context, arg GetActiveSessionsParams) ([]Session, error)
 	GetLinkByCode(ctx context.Context, code string) (Link, error)
 	GetLinkById(ctx context.Context, id int64) (Link, error)
 	GetLinks(ctx context.Context, arg GetLinksParams) ([]Link, error)
 	GetLinksByUser(ctx context.Context, arg GetLinksByUserParams) ([]Link, error)
+	GetSession(ctx context.Context, id uuid.UUID) (Session, error)
+	GetSessions(ctx context.Context, arg GetSessionsParams) ([]Session, error)
 	GetUser(ctx context.Context, usernameoremail string) (User, error)
 	GetUserById(ctx context.Context, id int64) (User, error)
 	ToggleStatus(ctx context.Context, arg ToggleStatusParams) (Link, error)

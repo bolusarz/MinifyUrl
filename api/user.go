@@ -83,8 +83,11 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	Token string       `json:"token"`
-	User  userResponse `json:"user"`
+	Token                 string       `json:"access_token"`
+	AccessTokenExpiresAt  time.Time    `json:"access_token_expires_at"`
+	RefreshToken          string       `json:"refresh_token"`
+	RefreshTokenExpiresAt time.Time    `json:"refresh_token_expires_at"`
+	User                  userResponse `json:"user"`
 }
 
 var ErrLoginFailed = errors.New("username/password is invalid")
@@ -111,7 +114,28 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	}
 
 	// Generate token
-	token, _, err := server.tokenMaker.CreateToken(user.ID, server.config.AccessTokenDuration)
+	token, tokenPayload, err := server.tokenMaker.CreateToken(user.ID, server.config.AccessTokenDuration)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(errors.New("An error occurred. "), http.StatusInternalServerError))
+		return
+	}
+
+	refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(user.ID, server.config.RefreshTokenDuration)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(errors.New("An error occurred. "), http.StatusInternalServerError))
+		return
+	}
+
+	arg := db.CreateSessionParams{
+		UserID:       user.ID,
+		UserAgent:    ctx.Request.UserAgent(),
+		ClientIp:     ctx.RemoteIP(),
+		RefreshToken: refreshToken,
+		ExpiresAt:    refreshPayload.ExpireAt,
+		IsBlocked:    false,
+	}
+
+	_, err = server.store.CreateSession(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(errors.New("An error occurred. "), http.StatusInternalServerError))
 		return
@@ -119,8 +143,11 @@ func (server *Server) loginUser(ctx *gin.Context) {
 
 	// Return payload to user
 	ctx.JSON(http.StatusOK, successResponse(loginUserResponse{
-		Token: token,
-		User:  newUserResponse(user),
+		Token:                 token,
+		RefreshToken:          refreshToken,
+		AccessTokenExpiresAt:  tokenPayload.ExpireAt,
+		RefreshTokenExpiresAt: refreshPayload.ExpireAt,
+		User:                  newUserResponse(user),
 	}, http.StatusOK))
 
 }
